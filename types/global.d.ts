@@ -10,14 +10,15 @@ export interface FormData {
 
 // Tipos para SharePoint
 // IMPORTANTE: Los nombres de campos deben coincidir con los nombres internos (name) en SharePoint
+// IMPORTANTE: Los campos opcionales solo deben incluirse si tienen valor (no enviar strings vacíos)
 export interface SharePointItem {
   fields: {
-    Title: string; // Número de crédito (campo requerido por SharePoint)
-    FechaNotificacion: string; // Fecha de notificación (dateTime, requerido)
-    GPS: string; // Coordenadas GPS o descripción
-    DiasMora: number; // Días de mora (number, requerido, mínimo 1)
-    Compromiso: string; // Fecha de compromiso de pago (dateTime, opcional)
-    Observaciones: string; // Observaciones (text, opcional)
+    Title: string; // Número de crédito (campo opcional en SharePoint pero requerido por nuestra app)
+    FechaNotificacion: string; // Fecha de notificación (dateTime, REQUERIDO en SharePoint)
+    DiasMora: number; // Días de mora (number, REQUERIDO en SharePoint, mínimo 1)
+    GPS?: string; // Coordenadas GPS (NOTA: Campo tipo Location - actualmente omitido, no acepta strings)
+    Compromiso?: string; // Fecha de compromiso de pago (dateTime, opcional)
+    Observaciones?: string; // Observaciones (text, opcional)
   };
 }
 

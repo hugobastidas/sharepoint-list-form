@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createGraphClient } from '@/lib/graphClient';
+import { createSharePointClient } from '@/lib/sharePointClient';
 import { getCurrentUser } from '@/lib/auth';
 import { FormData } from '@/types/global';
 
@@ -115,9 +115,9 @@ export async function POST(request: NextRequest) {
 
     console.log(`Creando item con ${files.length} archivo(s)...`);
 
-    // Crear cliente Graph y crear item con adjuntos
-    const graphClient = createGraphClient();
-    const itemId = await graphClient.createItemWithAttachments(itemData, files);
+    // Crear cliente SharePoint y crear item con adjuntos
+    const spClient = createSharePointClient();
+    const itemId = await spClient.createItemWithAttachments(itemData, files);
 
     return NextResponse.json({
       success: true,
@@ -137,8 +137,5 @@ export async function POST(request: NextRequest) {
 }
 
 // Configuración de Next.js para manejar archivos grandes
-export const config = {
-  api: {
-    bodyParser: false, // Deshabilitamos el bodyParser por defecto para usar formData
-  },
-};
+// En Next.js 14 App Router, esta configuración ya no es necesaria
+// formData se maneja automáticamente

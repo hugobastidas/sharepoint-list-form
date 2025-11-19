@@ -1,0 +1,1 @@
+ sleep 8 echo Servidor iniciado en http://localhost:3000 cat server.log

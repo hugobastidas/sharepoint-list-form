@@ -34,3 +34,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Certificados (NO SUBIR A GIT)
+*.pfx
+*.key
+*.crt
+sharepoint-app-cert.*

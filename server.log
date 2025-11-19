@@ -1,0 +1,62 @@
+
+> sharepoint-list-form@1.0.0 dev
+> next dev
+
+  ▲ Next.js 14.2.0
+  - Local:        http://localhost:3000
+  - Environments: .env
+
+ ✓ Starting...
+ ⚠ Invalid next.config.js options detected: 
+ ⚠     Expected object, received boolean at "experimental.serverActions"
+ ⚠     Unrecognized key(s) in object: 'api'
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+ ⚠ Server Actions are available by default now, `experimental.serverActions` option can be safely removed.
+ ✓ Ready in 1284ms
+ ✓ Compiled /middleware in 88ms (151 modules)
+ ○ Compiling /form ...
+ ✓ Compiled /form in 657ms (461 modules)
+ ⚠ Unsupported metadata viewport is configured in metadata export in /form. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /form 200 in 819ms
+ GET /form 200 in 784ms
+ ✓ Compiled in 89ms (237 modules)
+ ⚠ Unsupported metadata viewport is configured in metadata export in /form. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /form 200 in 23ms
+ GET /form 200 in 14ms
+ ✓ Compiled /login in 135ms (486 modules)
+ ⨯ TypeError: Failed to parse body as FormData.
+    at node:internal/deps/undici/undici:5789:27
+    at successSteps (node:internal/deps/undici/undici:5833:27)
+    at fullyReadBody (node:internal/deps/undici/undici:4725:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async consumeBody (node:internal/deps/undici/undici:5842:7)
+    at async /Users/hbastidas/Documents/RepoNextJs/sharepoint-list-form/node_modules/next/dist/compiled/next-server/app-page.runtime.dev.js:38:8725
+    at async rS (/Users/hbastidas/Documents/RepoNextJs/sharepoint-list-form/node_modules/next/dist/compiled/next-server/app-page.runtime.dev.js:38:8043)
+    at async r2 (/Users/hbastidas/Documents/RepoNextJs/sharepoint-list-form/node_modules/next/dist/compiled/next-server/app-page.runtime.dev.js:41:1251)
+    at async doRender (/Users/hbastidas/Documents/RepoNextJs/sharepoint-list-form/node_modules/next/dist/server/base-server.js:1433:30)
+    at async cacheEntry.responseCache.get.routeKind (/Users/hbastidas/Documents/RepoNextJs/sharepoint-list-form/node_modules/next/dist/server/base-server.js:1594:28)
+    at async DevServer.renderToResponseWithComponentsImpl (/Users/hbastidas/Documents/RepoNextJs/sharepoint-list-form/node_modules/next/dist/server/base-server.js:1502:28)
+    at async DevServer.renderPageComponent (/Users/hbastidas/Documents/RepoNextJs/sharepoint-list-form/node_modules/next/dist/server/base-server.js:1919:24)
+    at async DevServer.renderToResponseImpl (/Users/hbastidas/Documents/RepoNextJs/sharepoint-list-form/node_modules/next/dist/server/base-server.js:1957:32)
+    at async DevServer.pipeImpl (/Users/hbastidas/Documents/RepoNextJs/sharepoint-list-form/node_modules/next/dist/server/base-server.js:915:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/hbastidas/Documents/RepoNextJs/sharepoint-list-form/node_modules/next/dist/server/next-server.js:272:17)
+    at async DevServer.handleRequestImpl (/Users/hbastidas/Documents/RepoNextJs/sharepoint-list-form/node_modules/next/dist/server/base-server.js:811:17)
+    at async /Users/hbastidas/Documents/RepoNextJs/sharepoint-list-form/node_modules/next/dist/server/dev/next-dev-server.js:339:20
+    at async Span.traceAsyncFn (/Users/hbastidas/Documents/RepoNextJs/sharepoint-list-form/node_modules/next/dist/trace/trace.js:154:20)
+    at async DevServer.handleRequest (/Users/hbastidas/Documents/RepoNextJs/sharepoint-list-form/node_modules/next/dist/server/dev/next-dev-server.js:336:24)
+    at async invokeRender (/Users/hbastidas/Documents/RepoNextJs/sharepoint-list-form/node_modules/next/dist/server/lib/router-server.js:174:21)
+    at async handleRequest (/Users/hbastidas/Documents/RepoNextJs/sharepoint-list-form/node_modules/next/dist/server/lib/router-server.js:353:24)
+    at async requestHandlerImpl (/Users/hbastidas/Documents/RepoNextJs/sharepoint-list-form/node_modules/next/dist/server/lib/router-server.js:377:13)
+    at async Server.requestListener (/Users/hbastidas/Documents/RepoNextJs/sharepoint-list-form/node_modules/next/dist/server/lib/start-server.js:141:13) {
+  page: '/login'
+}
+ ✓ Compiled /_error in 251ms (710 modules)
+ POST /login 500 in 517ms
+ POST /login 500 in 515ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /form. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ⚠ Unsupported metadata viewport is configured in metadata export in /form. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+[?25h
