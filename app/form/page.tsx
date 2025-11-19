@@ -19,9 +19,15 @@ export default function FormPage() {
   const [fechaNotificacion, setFechaNotificacion] = useState('');
   const [gps, setGps] = useState('');
   const [diasMora, setDiasMora] = useState('');
+  const [agencia, setAgencia] = useState('');
   const [fechaCompromiso, setFechaCompromiso] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [imagenes, setImagenes] = useState<FileWithPreview[]>([]);
+
+  // Estados para validación de crédito
+  const [creditoValidado, setCreditoValidado] = useState(false);
+  const [buscandoCredito, setBuscandoCredito] = useState(false);
+  const [obteniendoGPS, setObteniendoGPS] = useState(false);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -63,10 +69,103 @@ export default function FormPage() {
     setImagenes(newImagenes);
   };
 
+  const handleNumeroCreditoChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Solo permitir números y máximo 12 caracteres
+    if (/^\d*$/.test(value) && value.length <= 12) {
+      setNumeroCredito(value);
+      // Si cambia el número, invalidar la validación previa
+      if (creditoValidado) {
+        setCreditoValidado(false);
+        setDiasMora('');
+        setAgencia('');
+      }
+    }
+  };
+
+  const handleBuscarCredito = async () => {
+    if (numeroCredito.length !== 12) {
+      setError('El número de crédito debe tener exactamente 12 caracteres');
+      return;
+    }
+
+    setError('');
+    setBuscandoCredito(true);
+
+    try {
+      const response = await fetch(
+        `/api/oracle/validar-credito?numeroCredito=${numeroCredito}`
+      );
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setError(data.error || 'Crédito no encontrado');
+        setCreditoValidado(false);
+        setDiasMora('');
+        setAgencia('');
+        setBuscandoCredito(false);
+        return;
+      }
+
+      // Crédito encontrado, llenar campos
+      setDiasMora(data.data.diasMora.toString());
+      setAgencia(data.data.agencia);
+      setCreditoValidado(true);
+      setError('');
+      setSuccess('✓ Crédito validado exitosamente');
+
+      // Limpiar mensaje de éxito después de 3 segundos
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Error validando crédito:', err);
+      setError('Error de conexión al validar el crédito');
+      setCreditoValidado(false);
+    } finally {
+      setBuscandoCredito(false);
+    }
+  };
+
+  const handleObtenerUbicacion = () => {
+    if (!navigator.geolocation) {
+      setError('La geolocalización no está soportada en su navegador');
+      return;
+    }
+
+    setObteniendoGPS(true);
+    setError('');
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        setGps(`${lat}, ${lng}`);
+        setObteniendoGPS(false);
+      },
+      (error) => {
+        console.error('Error obteniendo ubicación:', error);
+        setError('No se pudo obtener la ubicación. Puede ingresarla manualmente.');
+        setObteniendoGPS(false);
+      }
+    );
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    // Validar que el crédito haya sido validado
+    if (!creditoValidado) {
+      setError('Debe validar el número de crédito usando el botón BUSCAR');
+      return;
+    }
+
+    // Validar campos obligatorios
+    if (!numeroCredito || !fechaNotificacion || !diasMora || !agencia || !fechaCompromiso || !observaciones) {
+      setError('Todos los campos son obligatorios excepto GPS');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -76,6 +175,7 @@ export default function FormPage() {
       formData.append('fechaNotificacion', fechaNotificacion);
       formData.append('gps', gps);
       formData.append('diasMora', diasMora);
+      formData.append('agencia', agencia);
       formData.append('fechaCompromiso', fechaCompromiso);
       formData.append('observaciones', observaciones);
 
@@ -106,14 +206,16 @@ export default function FormPage() {
       setFechaNotificacion('');
       setGps('');
       setDiasMora('');
+      setAgencia('');
       setFechaCompromiso('');
       setObservaciones('');
       imagenes.forEach(img => URL.revokeObjectURL(img.preview));
       setImagenes([]);
+      setCreditoValidado(false);
 
       setIsLoading(false);
 
-      // Opcional: mostrar mensaje por 3 segundos
+      // Opcional: mostrar mensaje por 5 segundos
       setTimeout(() => {
         setSuccess('');
       }, 5000);
@@ -137,10 +239,10 @@ export default function FormPage() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              Registro de Crédito
+              Registro de Notificación
             </h1>
             <p className="text-gray-600 mt-1">
-              Complete el formulario con la información del crédito
+              Complete el formulario con la información de la notificación
             </p>
           </div>
           <button
@@ -154,21 +256,40 @@ export default function FormPage() {
         {/* Formulario */}
         <div className="card">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Número de Crédito */}
+            {/* Número de Crédito y Botón Buscar */}
             <div>
               <label htmlFor="numeroCredito" className="form-label">
                 Número de Crédito *
               </label>
-              <input
-                id="numeroCredito"
-                type="text"
-                value={numeroCredito}
-                onChange={(e) => setNumeroCredito(e.target.value)}
-                className="form-input"
-                placeholder="Ej: 12345678"
-                required
-                disabled={isLoading}
-              />
+              <div className="flex gap-2">
+                <input
+                  id="numeroCredito"
+                  type="text"
+                  value={numeroCredito}
+                  onChange={handleNumeroCreditoChange}
+                  className="form-input flex-1"
+                  placeholder="Ej: 603100026310"
+                  maxLength={12}
+                  required
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  onClick={handleBuscarCredito}
+                  disabled={numeroCredito.length !== 12 || buscandoCredito || isLoading}
+                  className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {buscandoCredito ? 'Buscando...' : 'BUSCAR'}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Debe tener exactamente 12 caracteres numéricos
+              </p>
+              {creditoValidado && (
+                <p className="text-xs text-green-600 mt-1 font-medium">
+                  ✓ Crédito validado
+                </p>
+              )}
             </div>
 
             {/* Grid de 2 columnas en desktop */}
@@ -185,11 +306,11 @@ export default function FormPage() {
                   onChange={(e) => setFechaNotificacion(e.target.value)}
                   className="form-input"
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || !creditoValidado}
                 />
               </div>
 
-              {/* Días de Mora */}
+              {/* Días de Mora - Auto-llenado */}
               <div>
                 <label htmlFor="diasMora" className="form-label">
                   Días de Mora *
@@ -198,17 +319,37 @@ export default function FormPage() {
                   id="diasMora"
                   type="number"
                   value={diasMora}
-                  onChange={(e) => setDiasMora(e.target.value)}
-                  className="form-input"
-                  placeholder="Ej: 30"
-                  min="1"
+                  className="form-input bg-gray-100"
+                  placeholder="Se llenará automáticamente"
+                  min="0"
                   required
-                  disabled={isLoading}
+                  readOnly
+                  disabled
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Debe ser un número mayor o igual a 1
+                  Se obtiene automáticamente de Oracle
                 </p>
               </div>
+            </div>
+
+            {/* Agencia - Auto-llenado */}
+            <div>
+              <label htmlFor="agencia" className="form-label">
+                Agencia *
+              </label>
+              <input
+                id="agencia"
+                type="text"
+                value={agencia}
+                className="form-input bg-gray-100"
+                placeholder="Se llenará automáticamente"
+                required
+                readOnly
+                disabled
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Se obtiene automáticamente de Oracle
+              </p>
             </div>
 
             {/* GPS */}
@@ -216,24 +357,34 @@ export default function FormPage() {
               <label htmlFor="gps" className="form-label">
                 Coordenadas GPS
               </label>
-              <input
-                id="gps"
-                type="text"
-                value={gps}
-                onChange={(e) => setGps(e.target.value)}
-                className="form-input"
-                placeholder="Ej: -2.9001, -79.0059 o descripción de ubicación"
-                disabled={isLoading}
-              />
+              <div className="flex gap-2">
+                <input
+                  id="gps"
+                  type="text"
+                  value={gps}
+                  onChange={(e) => setGps(e.target.value)}
+                  className="form-input flex-1"
+                  placeholder="Ej: -2.9001, -79.0059 o descripción de ubicación"
+                  disabled={isLoading || !creditoValidado}
+                />
+                <button
+                  type="button"
+                  onClick={handleObtenerUbicacion}
+                  disabled={obteniendoGPS || isLoading || !creditoValidado}
+                  className="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                >
+                  {obteniendoGPS ? 'Obteniendo...' : '📍 Obtener Ubicación'}
+                </button>
+              </div>
               <p className="text-xs text-gray-500 mt-1">
-                Ingrese las coordenadas GPS o una descripción de la ubicación
+                Puede obtener su ubicación actual o ingresar manualmente (campo opcional)
               </p>
             </div>
 
             {/* Fecha de Compromiso */}
             <div>
               <label htmlFor="fechaCompromiso" className="form-label">
-                Fecha de Compromiso de Pago
+                Fecha de Compromiso de Pago *
               </label>
               <input
                 id="fechaCompromiso"
@@ -241,14 +392,15 @@ export default function FormPage() {
                 value={fechaCompromiso}
                 onChange={(e) => setFechaCompromiso(e.target.value)}
                 className="form-input"
-                disabled={isLoading}
+                required
+                disabled={isLoading || !creditoValidado}
               />
             </div>
 
             {/* Observaciones */}
             <div>
               <label htmlFor="observaciones" className="form-label">
-                Observaciones
+                Observaciones *
               </label>
               <textarea
                 id="observaciones"
@@ -257,7 +409,8 @@ export default function FormPage() {
                 className="form-input"
                 rows={4}
                 placeholder="Ingrese observaciones adicionales..."
-                disabled={isLoading}
+                required
+                disabled={isLoading || !creditoValidado}
               />
             </div>
 
@@ -271,7 +424,11 @@ export default function FormPage() {
               <div className="mt-2">
                 <label
                   htmlFor="imagenes"
-                  className="flex items-center justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-lg appearance-none cursor-pointer hover:border-primary-400 focus:outline-none"
+                  className={`flex items-center justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-lg appearance-none ${
+                    creditoValidado && !isLoading
+                      ? 'cursor-pointer hover:border-primary-400'
+                      : 'cursor-not-allowed opacity-50'
+                  } focus:outline-none`}
                 >
                   <div className="flex flex-col items-center space-y-2">
                     <svg
@@ -302,7 +459,7 @@ export default function FormPage() {
                   multiple
                   onChange={handleFileChange}
                   className="hidden"
-                  disabled={isLoading || imagenes.length >= 5}
+                  disabled={isLoading || imagenes.length >= 5 || !creditoValidado}
                 />
               </div>
 
@@ -373,7 +530,7 @@ export default function FormPage() {
             <button
               type="submit"
               className="btn-primary"
-              disabled={isLoading}
+              disabled={isLoading || !creditoValidado}
             >
               {isLoading ? (
                 <span className="flex items-center justify-center">

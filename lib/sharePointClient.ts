@@ -188,6 +188,7 @@ export class SharePointClient {
         Title: formData.numeroCredito,
         FechaNotificacion: formData.fechaNotificacion,
         DiasMora: formData.diasMora,
+        Agencia: formData.agencia,
       };
 
       // Establecer el campo "usuario" (campo personalizado de tipo User)
