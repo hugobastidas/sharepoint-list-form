@@ -21,7 +21,6 @@ export default function FormPage() {
   const [diasMora, setDiasMora] = useState('');
   const [fechaCompromiso, setFechaCompromiso] = useState('');
   const [observaciones, setObservaciones] = useState('');
-  const [usuario, setUsuario] = useState('');
   const [imagenes, setImagenes] = useState<FileWithPreview[]>([]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -79,7 +78,6 @@ export default function FormPage() {
       formData.append('diasMora', diasMora);
       formData.append('fechaCompromiso', fechaCompromiso);
       formData.append('observaciones', observaciones);
-      formData.append('usuario', usuario);
 
       // Agregar imágenes
       imagenes.forEach((img, index) => {
@@ -110,7 +108,6 @@ export default function FormPage() {
       setDiasMora('');
       setFechaCompromiso('');
       setObservaciones('');
-      setUsuario('');
       imagenes.forEach(img => URL.revokeObjectURL(img.preview));
       setImagenes([]);
 
@@ -204,10 +201,13 @@ export default function FormPage() {
                   onChange={(e) => setDiasMora(e.target.value)}
                   className="form-input"
                   placeholder="Ej: 30"
-                  min="0"
+                  min="1"
                   required
                   disabled={isLoading}
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Debe ser un número mayor o igual a 1
+                </p>
               </div>
             </div>
 
@@ -222,15 +222,18 @@ export default function FormPage() {
                 value={gps}
                 onChange={(e) => setGps(e.target.value)}
                 className="form-input"
-                placeholder="Ej: -12.0464, -77.0428"
+                placeholder="Ej: -2.9001, -79.0059 o descripción de ubicación"
                 disabled={isLoading}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Ingrese las coordenadas GPS o una descripción de la ubicación
+              </p>
             </div>
 
             {/* Fecha de Compromiso */}
             <div>
               <label htmlFor="fechaCompromiso" className="form-label">
-                Fecha de Compromiso
+                Fecha de Compromiso de Pago
               </label>
               <input
                 id="fechaCompromiso"
@@ -238,23 +241,6 @@ export default function FormPage() {
                 value={fechaCompromiso}
                 onChange={(e) => setFechaCompromiso(e.target.value)}
                 className="form-input"
-                disabled={isLoading}
-              />
-            </div>
-
-            {/* Usuario */}
-            <div>
-              <label htmlFor="usuario" className="form-label">
-                Usuario *
-              </label>
-              <input
-                id="usuario"
-                type="text"
-                value={usuario}
-                onChange={(e) => setUsuario(e.target.value)}
-                className="form-input"
-                placeholder="Nombre del usuario"
-                required
                 disabled={isLoading}
               />
             </div>

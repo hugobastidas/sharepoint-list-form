@@ -52,16 +52,15 @@ export class GraphClient {
   async createListItem(formData: FormData): Promise<string> {
     try {
       // Preparar el objeto con los campos de SharePoint
+      // IMPORTANTE: Los nombres de campos deben coincidir EXACTAMENTE con los nombres internos (name) en SharePoint
       const itemData: SharePointItem = {
         fields: {
-          Title: formData.numeroCredito, // SharePoint requiere un campo Title
-          numeroCredito: formData.numeroCredito,
-          fechaNotificacion: formData.fechaNotificacion,
-          gps: formData.gps,
-          diasMora: formData.diasMora,
-          fechaCompromiso: formData.fechaCompromiso,
-          observaciones: formData.observaciones,
-          usuario: formData.usuario,
+          Title: formData.numeroCredito, // Campo requerido por SharePoint (lo usamos para el número de crédito)
+          FechaNotificacion: formData.fechaNotificacion, // Campo dateTime requerido
+          GPS: formData.gps, // Campo GPS (puede ser coordenadas o descripción)
+          DiasMora: formData.diasMora, // Campo number requerido (mínimo 1)
+          Compromiso: formData.fechaCompromiso, // Campo dateTime opcional (nota: el nombre es "Compromiso", no "fechaCompromiso")
+          Observaciones: formData.observaciones, // Campo text opcional
         },
       };
 
@@ -74,6 +73,12 @@ export class GraphClient {
       return result.id;
     } catch (error: any) {
       console.error('Error creando item en SharePoint:', error);
+
+      // Log detallado del error para debugging
+      if (error.body) {
+        console.error('Error body:', JSON.stringify(error.body, null, 2));
+      }
+
       throw new Error(`Error creando item: ${error.message}`);
     }
   }
