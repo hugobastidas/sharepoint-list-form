@@ -10,6 +10,7 @@ services:
     restart: unless-stopped
     environment:
       - NODE_ENV=production
+      - TZ=${TZ:-America/Guayaquil}
     networks:
       - app-network
     # No exponemos el puerto directamente, solo a través de nginx
@@ -20,8 +21,9 @@ services:
     container_name: sharepoint-form-nginx
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "8443:443"
+    environment:
+      - TZ=${TZ:-America/Guayaquil}
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./certs/public.pem:/etc/nginx/ssl/public.pem:ro
