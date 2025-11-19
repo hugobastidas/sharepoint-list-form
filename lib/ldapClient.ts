@@ -135,16 +135,6 @@ export class LdapClient {
                 }
               }
             });
-          } else if (entry.object) {
-            // Fallback si entry.object existe
-            Object.assign(attributes, entry.object);
-            if (attributes.memberOf) {
-              if (Array.isArray(attributes.memberOf)) {
-                memberOfValues.push(...attributes.memberOf);
-              } else {
-                memberOfValues.push(attributes.memberOf);
-              }
-            }
           }
 
           // Extraer nombres de grupos del DN (CN=nombregrupo,OU=...)
@@ -226,8 +216,6 @@ export class LdapClient {
                 attributes[attr.type] = value.toString();
               }
             });
-          } else if (entry.object) {
-            Object.assign(attributes, entry.object);
           }
 
           const user = {
