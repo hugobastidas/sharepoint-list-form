@@ -2,15 +2,8 @@
 const nextConfig = {
   // Configuración para Docker (standalone output)
   output: 'standalone',
-  experimental: {
-    serverActions: true,
-  },
-  // Configuración para manejar archivos grandes
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-  },
+  // Server Actions están habilitados por defecto en Next.js 14.2+
+  // La configuración api.bodyParser debe configurarse en route handlers individuales si es necesaria
 }
 
 module.exports = nextConfig
