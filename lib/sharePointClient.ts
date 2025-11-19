@@ -95,6 +95,43 @@ export class SharePointClient {
   }
 
   /**
+   * Busca un usuario en SharePoint por email y retorna su ID
+   */
+  private async getUserIdByEmail(email: string): Promise<number | null> {
+    try {
+      const token = await this.getToken();
+      const encodedEmail = encodeURIComponent(email);
+      const response = await fetch(
+        `${this.siteUrl}/_api/web/siteusers?$filter=Email eq '${encodedEmail}'`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json;odata=verbose',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error('Error buscando usuario:', response.status);
+        return null;
+      }
+
+      const data = await response.json();
+      if (data.d && data.d.results && data.d.results.length > 0) {
+        const userId = data.d.results[0].Id;
+        console.log(`Usuario encontrado: ${email} -> ID: ${userId}`);
+        return userId;
+      }
+
+      console.log(`Usuario no encontrado en SharePoint: ${email}`);
+      return null;
+    } catch (error: any) {
+      console.error('Error buscando usuario en SharePoint:', error);
+      return null;
+    }
+  }
+
+  /**
    * Obtiene el Entity Type de la lista (necesario para crear items)
    */
   private async getListEntityType(): Promise<string> {
@@ -130,13 +167,20 @@ export class SharePointClient {
   /**
    * Crea un item en la lista de SharePoint usando REST API
    */
-  async createListItem(formData: FormData): Promise<string> {
+  async createListItem(formData: FormData, userEmail?: string): Promise<string> {
     try {
       console.log('\n[SharePoint REST] Creando item...');
 
       const token = await this.getToken();
       const formDigest = await this.getFormDigest();
       const entityType = await this.getListEntityType();
+
+      // Buscar el usuario en SharePoint si tenemos el email
+      let authorId: number | null = null;
+      if (userEmail) {
+        console.log(`Buscando usuario en SharePoint: ${userEmail}`);
+        authorId = await this.getUserIdByEmail(userEmail);
+      }
 
       // Preparar campos
       const itemData: any = {
@@ -145,6 +189,12 @@ export class SharePointClient {
         FechaNotificacion: formData.fechaNotificacion,
         DiasMora: formData.diasMora,
       };
+
+      // Establecer el campo "usuario" (campo personalizado de tipo User)
+      if (authorId) {
+        itemData.usuarioId = authorId;
+        console.log(`✓ Estableciendo campo usuario con ID: ${authorId}`);
+      }
 
       // Agregar campos opcionales solo si tienen valor
       if (formData.fechaCompromiso && formData.fechaCompromiso.trim() !== '') {
@@ -230,11 +280,12 @@ export class SharePointClient {
    */
   async createItemWithAttachments(
     formData: FormData,
-    files: Array<{ name: string; buffer: Buffer }>
+    files: Array<{ name: string; buffer: Buffer }>,
+    userEmail?: string
   ): Promise<string> {
     try {
-      // Crear el item
-      const itemId = await this.createListItem(formData);
+      // Crear el item con el email del usuario
+      const itemId = await this.createListItem(formData, userEmail);
 
       // Adjuntar archivos si hay
       if (files && files.length > 0) {

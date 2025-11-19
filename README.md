@@ -114,13 +114,21 @@ Write-Host "List ID: $($list.Id)"
 
 La lista debe tener estas columnas (nombres exactos):
 
-| Columna           | Tipo             | Requerido |
-|-------------------|------------------|-----------|
-| Title             | Single line text | Sí        |
-| FechaNotificacion | Date             | Sí        |
-| DiasMora          | Number           | Sí        |
-| Compromiso        | Date             | No        |
-| Observaciones     | Multiple lines   | No        |
+| Columna           | Tipo             | Requerido | Notas                           |
+|-------------------|------------------|-----------|---------------------------------|
+| Title             | Single line text | Sí        | Se usa numeroCredito            |
+| FechaNotificacion | Date             | Sí        |                                 |
+| DiasMora          | Number           | Sí        |                                 |
+| Compromiso        | Date             | No        |                                 |
+| Observaciones     | Multiple lines   | No        |                                 |
+| usuario           | Person or Group  | No        | Muestra quién creó el registro  |
+
+**Configuración del campo "usuario":**
+1. Crear columna tipo "Person or Group"
+2. Nombre: `usuario`
+3. Permitir seleccionar: Solo personas
+4. Mostrar: Nombre (con presencia) y foto
+5. Permitir múltiples valores: No
 
 **Nota:** La aplicación usa la funcionalidad nativa de adjuntos de SharePoint Lists.
 

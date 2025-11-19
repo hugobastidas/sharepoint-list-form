@@ -41,6 +41,8 @@ export interface LdapUser {
 // Tipo para el JWT payload
 export interface JWTPayload {
   username: string;
+  displayName?: string;
+  email?: string;
   iat?: number;
   exp?: number;
 }

@@ -114,10 +114,13 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`Creando item con ${files.length} archivo(s)...`);
+    console.log(`Usuario: ${user.displayName || user.username} (${user.email || user.username + '@coopacaustro.fin.ec'})`);
 
     // Crear cliente SharePoint y crear item con adjuntos
     const spClient = createSharePointClient();
-    const itemId = await spClient.createItemWithAttachments(itemData, files);
+    // Usar email del JWT o construirlo con el dominio coopacaustro.fin.ec
+    const userEmail = user.email || `${user.username}@coopacaustro.fin.ec`;
+    const itemId = await spClient.createItemWithAttachments(itemData, files, userEmail);
 
     return NextResponse.json({
       success: true,

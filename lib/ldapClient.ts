@@ -33,8 +33,9 @@ export class LdapClient {
 
   /**
    * Autentica un usuario contra el servidor LDAP usando autenticación directa (username@domain)
+   * Retorna la información del usuario si la autenticación es exitosa
    */
-  async authenticate(username: string, password: string): Promise<boolean> {
+  async authenticate(username: string, password: string): Promise<{ authenticated: boolean; user?: any }> {
     return new Promise((resolve) => {
       const url = this.getUrl();
       const client = ldap.createClient({
@@ -56,42 +57,42 @@ export class LdapClient {
         if (err) {
           console.error('Error de autenticación LDAP:', err.message);
           client.unbind();
-          resolve(false);
+          resolve({ authenticated: false });
           return;
         }
 
         console.log(`Usuario ${username} autenticado exitosamente`);
 
-        // Verificar que el usuario esté activo (no deshabilitado)
-        this.verifyUserActive(client, username)
-          .then((isActive) => {
+        // Obtener información del usuario
+        this.getUserInfo(client, username)
+          .then((userInfo) => {
             client.unbind();
-            if (!isActive) {
-              console.log(`Usuario ${username} está deshabilitado`);
-              resolve(false);
+            if (!userInfo) {
+              console.log(`Usuario ${username} está deshabilitado o no encontrado`);
+              resolve({ authenticated: false });
             } else {
-              resolve(true);
+              resolve({ authenticated: true, user: userInfo });
             }
           })
           .catch((err) => {
-            console.error('Error verificando estado del usuario:', err);
+            console.error('Error obteniendo información del usuario:', err);
             client.unbind();
-            resolve(false);
+            resolve({ authenticated: false });
           });
       });
 
       // Manejar errores de conexión
       client.on('error', (err) => {
         console.error('Error de conexión LDAP:', err.message);
-        resolve(false);
+        resolve({ authenticated: false });
       });
     });
   }
 
   /**
-   * Verifica si el usuario está activo (no deshabilitado) en AD
+   * Obtiene información del usuario si está activo (no deshabilitado) en AD
    */
-  private async verifyUserActive(client: any, username: string): Promise<boolean> {
+  private async getUserInfo(client: any, username: string): Promise<any> {
     return new Promise((resolve) => {
       // Reemplazar {username} en el filtro
       const filter = this.userSearchFilter.replace('{username}', username);
@@ -107,26 +108,47 @@ export class LdapClient {
       client.search(this.userSearchBase, searchOptions, (err: any, res: any) => {
         if (err) {
           console.error('Error en búsqueda LDAP:', err);
-          resolve(false);
+          resolve(null);
           return;
         }
 
         let found = false;
         res.on('searchEntry', (entry: any) => {
           found = true;
-          console.log(`Usuario ${username} encontrado y activo`);
-          resolve(true);
+
+          // Obtener atributos de forma segura
+          const attributes: any = {};
+          if (entry.attributes) {
+            entry.attributes.forEach((attr: any) => {
+              const value = attr.vals?.[0] || attr.values?.[0] || attr._vals?.[0];
+              if (value) {
+                attributes[attr.type] = value.toString();
+              }
+            });
+          } else if (entry.object) {
+            // Fallback si entry.object existe
+            Object.assign(attributes, entry.object);
+          }
+
+          const userInfo = {
+            username: attributes.sAMAccountName || username,
+            displayName: attributes.displayName || attributes.cn || username,
+            email: attributes.mail || `${username}@coopacaustro.fin.ec`,
+            cn: attributes.cn,
+          };
+          console.log(`Usuario encontrado:`, userInfo);
+          resolve(userInfo);
         });
 
         res.on('error', (err: any) => {
           console.error('Error en búsqueda LDAP:', err);
-          resolve(false);
+          resolve(null);
         });
 
         res.on('end', () => {
           if (!found) {
             console.log(`Usuario ${username} no encontrado o está deshabilitado`);
-            resolve(false);
+            resolve(null);
           }
         });
       });
@@ -169,13 +191,27 @@ export class LdapClient {
         let found = false;
         res.on('searchEntry', (entry) => {
           found = true;
+
+          // Obtener atributos de forma segura
+          const attributes: any = {};
+          if (entry.attributes) {
+            entry.attributes.forEach((attr: any) => {
+              const value = attr.vals?.[0] || attr.values?.[0] || attr._vals?.[0];
+              if (value) {
+                attributes[attr.type] = value.toString();
+              }
+            });
+          } else if (entry.object) {
+            Object.assign(attributes, entry.object);
+          }
+
           const user = {
             dn: entry.objectName,
-            sAMAccountName: entry.object.sAMAccountName,
-            cn: entry.object.cn,
-            mail: entry.object.mail,
-            displayName: entry.object.displayName,
-            userPrincipalName: entry.object.userPrincipalName,
+            sAMAccountName: attributes.sAMAccountName,
+            cn: attributes.cn,
+            mail: attributes.mail,
+            displayName: attributes.displayName,
+            userPrincipalName: attributes.userPrincipalName,
           };
           client.unbind();
           resolve(user);

@@ -20,17 +20,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Validar contra LDAP
-    const isAuthenticated = await ldapClient.authenticate(username, password);
+    const authResult = await ldapClient.authenticate(username, password);
 
-    if (!isAuthenticated) {
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json(
         { success: false, error: 'Credenciales inválidas' },
         { status: 401 }
       );
     }
 
-    // Crear token JWT
-    const token = await createToken(username);
+    const { displayName, email } = authResult.user;
+
+    // Crear token JWT con información del usuario
+    const token = await createToken(username, displayName, email);
 
     // Crear respuesta
     const response = NextResponse.json({
