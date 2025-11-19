@@ -36,6 +36,24 @@ body {
 /* Estilos personalizados para el formulario */
 .form-input {
   @apply w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200;
+  background-color: white !important;
+  color: #1f2937 !important; /* gray-800 para texto visible */
+}
+
+.form-input::placeholder {
+  color: #9ca3af !important; /* gray-400 para placeholder */
+}
+
+/* Asegurar que los inputs de tipo date, number, etc también sean visibles */
+.form-input::-webkit-calendar-picker-indicator {
+  filter: invert(0.5);
+}
+
+.form-input[type="date"],
+.form-input[type="number"],
+.form-input[type="text"],
+.form-input[type="password"] {
+  color-scheme: light;
 }
 
 .form-label {
