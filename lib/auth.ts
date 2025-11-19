@@ -38,7 +38,8 @@ export async function createToken(
 export async function verifyToken(token: string): Promise<JWTPayload | null> {
   try {
     const verified = await jwtVerify(token, SECRET_KEY);
-    return verified.payload as JWTPayload;
+    // Cast explícito para evitar conflicto entre jose.JWTPayload y nuestro tipo personalizado
+    return verified.payload as unknown as JWTPayload;
   } catch (error) {
     console.error('Error verificando token:', error);
     return null;
