@@ -29,10 +29,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { displayName, email } = authResult.user;
+    const { displayName, email, groups } = authResult.user;
 
-    // Crear token JWT con información del usuario
-    const token = await createToken(username, displayName, email);
+    // Obtener grupos permitidos desde variables de entorno
+    const gruposCobranzas = (process.env.AD_GROUP_COBRANZAS || '').split(',').map(g => g.trim().toLowerCase()).filter(g => g !== '');
+    const gruposInspecciones = (process.env.AD_GROUP_INSPECCIONES || '').split(',').map(g => g.trim().toLowerCase()).filter(g => g !== '');
+    const gruposPermitidos = [...gruposCobranzas, ...gruposInspecciones];
+
+    // Validar que el usuario pertenezca al menos a uno de los grupos permitidos
+    const userGroups = groups || [];
+    const hasPermission = userGroups.some((group: string) =>
+      gruposPermitidos.includes(group.toLowerCase())
+    );
+
+    if (!hasPermission) {
+      console.log(`Usuario ${username} no pertenece a ningún grupo permitido`);
+      console.log(`Grupos del usuario:`, userGroups);
+      console.log(`Grupos permitidos:`, gruposPermitidos);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'No tiene permisos para acceder a esta aplicación. Usuario no pertenece a grupos permitidos.'
+        },
+        { status: 403 }
+      );
+    }
+
+    // Crear token JWT con información del usuario incluyendo grupos
+    const token = await createToken(username, displayName, email, groups);
 
     // Crear respuesta
     const response = NextResponse.json({

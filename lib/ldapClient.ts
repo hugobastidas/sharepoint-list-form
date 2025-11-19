@@ -100,7 +100,7 @@ export class LdapClient {
       const searchOptions = {
         filter: filter,
         scope: 'sub' as const,
-        attributes: ['sAMAccountName', 'userAccountControl', 'cn', 'mail', 'displayName'],
+        attributes: ['sAMAccountName', 'userAccountControl', 'cn', 'mail', 'displayName', 'memberOf'],
       };
 
       console.log(`Buscando usuario en: ${this.userSearchBase} con filtro: ${filter}`);
@@ -118,25 +118,50 @@ export class LdapClient {
 
           // Obtener atributos de forma segura
           const attributes: any = {};
+          const memberOfValues: string[] = [];
+
           if (entry.attributes) {
             entry.attributes.forEach((attr: any) => {
-              const value = attr.vals?.[0] || attr.values?.[0] || attr._vals?.[0];
-              if (value) {
-                attributes[attr.type] = value.toString();
+              if (attr.type === 'memberOf') {
+                // memberOf puede tener múltiples valores
+                const values = attr.vals || attr.values || attr._vals || [];
+                values.forEach((val: any) => {
+                  memberOfValues.push(val.toString());
+                });
+              } else {
+                const value = attr.vals?.[0] || attr.values?.[0] || attr._vals?.[0];
+                if (value) {
+                  attributes[attr.type] = value.toString();
+                }
               }
             });
           } else if (entry.object) {
             // Fallback si entry.object existe
             Object.assign(attributes, entry.object);
+            if (attributes.memberOf) {
+              if (Array.isArray(attributes.memberOf)) {
+                memberOfValues.push(...attributes.memberOf);
+              } else {
+                memberOfValues.push(attributes.memberOf);
+              }
+            }
           }
+
+          // Extraer nombres de grupos del DN (CN=nombregrupo,OU=...)
+          const groups = memberOfValues.map((dn: string) => {
+            const match = dn.match(/^CN=([^,]+)/i);
+            return match ? match[1].toLowerCase() : '';
+          }).filter((group: string) => group !== '');
 
           const userInfo = {
             username: attributes.sAMAccountName || username,
             displayName: attributes.displayName || attributes.cn || username,
             email: attributes.mail || `${username}@coopacaustro.fin.ec`,
             cn: attributes.cn,
+            groups: groups,
           };
           console.log(`Usuario encontrado:`, userInfo);
+          console.log(`Grupos del usuario:`, groups);
           resolve(userInfo);
         });
 

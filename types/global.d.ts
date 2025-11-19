@@ -45,6 +45,7 @@ export interface JWTPayload {
   username: string;
   displayName?: string;
   email?: string;
+  groups?: string[];
   iat?: number;
   exp?: number;
 }

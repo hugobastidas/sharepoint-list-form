@@ -2,6 +2,7 @@
 
 import { useState, FormEvent, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import imageCompression from 'browser-image-compression';
 
 interface FileWithPreview {
   file: File;
@@ -13,6 +14,7 @@ export default function FormPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [registroGuardado, setRegistroGuardado] = useState(false);
 
   // Estados del formulario
   const [numeroCredito, setNumeroCredito] = useState('');
@@ -28,8 +30,9 @@ export default function FormPage() {
   const [creditoValidado, setCreditoValidado] = useState(false);
   const [buscandoCredito, setBuscandoCredito] = useState(false);
   const [obteniendoGPS, setObteniendoGPS] = useState(false);
+  const [comprimiendoImagenes, setComprimiendoImagenes] = useState(false);
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
 
     // Validar número máximo de archivos
@@ -38,28 +41,66 @@ export default function FormPage() {
       return;
     }
 
-    // Validar cada archivo
+    setComprimiendoImagenes(true);
+    setError('');
+
+    // Opciones de compresión
+    const compressionOptions = {
+      maxSizeMB: 1, // Comprimir hasta máximo 1MB
+      maxWidthOrHeight: 1920, // Mantener resolución máxima de 1920px
+      useWebWorker: true, // Usar worker para no bloquear la UI
+      initialQuality: 0.8, // 80% de calidad inicial
+    };
+
+    // Validar y comprimir cada archivo
     const validFiles: FileWithPreview[] = [];
+
     for (const file of files) {
-      // Validar tipo
-      if (!file.type.startsWith('image/')) {
-        setError(`El archivo ${file.name} no es una imagen válida`);
+      try {
+        // Validar tipo
+        if (!file.type.startsWith('image/')) {
+          setError(`El archivo ${file.name} no es una imagen válida`);
+          setComprimiendoImagenes(false);
+          continue;
+        }
+
+        // Validar tamaño original (10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          setError(`El archivo ${file.name} excede el tamaño máximo de 10MB`);
+          setComprimiendoImagenes(false);
+          continue;
+        }
+
+        // Comprimir la imagen
+        const compressedFile = await imageCompression(file, compressionOptions);
+
+        // Calcular porcentaje de reducción
+        const reductionPercent = ((file.size - compressedFile.size) / file.size * 100).toFixed(1);
+        console.log(`Imagen ${file.name}:`,
+          `Original: ${(file.size / 1024 / 1024).toFixed(2)}MB`,
+          `→ Comprimida: ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`,
+          `(${reductionPercent}% reducción)`
+        );
+
+        // Crear preview
+        const preview = URL.createObjectURL(compressedFile);
+        validFiles.push({ file: compressedFile, preview });
+
+      } catch (error) {
+        console.error(`Error al comprimir ${file.name}:`, error);
+        setError(`Error al procesar la imagen ${file.name}`);
+        setComprimiendoImagenes(false);
         continue;
       }
-
-      // Validar tamaño (5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setError(`El archivo ${file.name} excede el tamaño máximo de 5MB`);
-        continue;
-      }
-
-      // Crear preview
-      const preview = URL.createObjectURL(file);
-      validFiles.push({ file, preview });
     }
 
-    setImagenes([...imagenes, ...validFiles]);
-    setError('');
+    setComprimiendoImagenes(false);
+
+    if (validFiles.length > 0) {
+      setImagenes([...imagenes, ...validFiles]);
+      setSuccess(`${validFiles.length} imagen(es) comprimida(s) y lista(s) para subir`);
+      setTimeout(() => setSuccess(''), 3000);
+    }
   };
 
   const removeImage = (index: number) => {
@@ -143,7 +184,23 @@ export default function FormPage() {
       },
       (error) => {
         console.error('Error obteniendo ubicación:', error);
-        setError('No se pudo obtener la ubicación. Puede ingresarla manualmente.');
+        let errorMsg = 'No se pudo obtener la ubicación. ';
+
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            errorMsg += 'Permiso denegado. Habilite la ubicación en su navegador.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMsg += 'Información de ubicación no disponible.';
+            break;
+          case error.TIMEOUT:
+            errorMsg += 'Tiempo de espera agotado.';
+            break;
+          default:
+            errorMsg += 'Puede ingresarla manualmente.';
+        }
+
+        setError(errorMsg);
         setObteniendoGPS(false);
       }
     );
@@ -200,31 +257,31 @@ export default function FormPage() {
 
       // Éxito
       setSuccess(`Registro creado exitosamente. ID: ${data.itemId}`);
-
-      // Limpiar formulario
-      setNumeroCredito('');
-      setFechaNotificacion('');
-      setGps('');
-      setDiasMora('');
-      setAgencia('');
-      setFechaCompromiso('');
-      setObservaciones('');
-      imagenes.forEach(img => URL.revokeObjectURL(img.preview));
-      setImagenes([]);
-      setCreditoValidado(false);
-
+      setRegistroGuardado(true);
       setIsLoading(false);
-
-      // Opcional: mostrar mensaje por 5 segundos
-      setTimeout(() => {
-        setSuccess('');
-      }, 5000);
 
     } catch (err: any) {
       console.error('Error en submit:', err);
       setError('Error de conexión. Intente nuevamente.');
       setIsLoading(false);
     }
+  };
+
+  const handleNuevoRegistro = () => {
+    // Limpiar formulario
+    setNumeroCredito('');
+    setFechaNotificacion('');
+    setGps('');
+    setDiasMora('');
+    setAgencia('');
+    setFechaCompromiso('');
+    setObservaciones('');
+    imagenes.forEach(img => URL.revokeObjectURL(img.preview));
+    setImagenes([]);
+    setCreditoValidado(false);
+    setRegistroGuardado(false);
+    setSuccess('');
+    setError('');
   };
 
   const handleLogout = async () => {
@@ -283,7 +340,7 @@ export default function FormPage() {
                 </button>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Debe tener exactamente 12 caracteres numéricos
+                Debe tener 12 caracteres.
               </p>
               {creditoValidado && (
                 <p className="text-xs text-green-600 mt-1 font-medium">
@@ -294,19 +351,20 @@ export default function FormPage() {
 
             {/* Grid de 2 columnas en desktop */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Fecha de Notificación */}
+              {/* Agencia - Auto-llenado */}
               <div>
-                <label htmlFor="fechaNotificacion" className="form-label">
-                  Fecha de Notificación *
+                <label htmlFor="agencia" className="form-label">
+                  Agencia *
                 </label>
                 <input
-                  id="fechaNotificacion"
-                  type="date"
-                  value={fechaNotificacion}
-                  onChange={(e) => setFechaNotificacion(e.target.value)}
-                  className="form-input"
+                  id="agencia"
+                  type="text"
+                  value={agencia}
+                  className="form-input bg-gray-100"
+                  placeholder="Se llenará automáticamente"
                   required
-                  disabled={isLoading || !creditoValidado}
+                  readOnly
+                  disabled
                 />
               </div>
 
@@ -326,30 +384,23 @@ export default function FormPage() {
                   readOnly
                   disabled
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Se obtiene automáticamente de Oracle
-                </p>
               </div>
             </div>
 
-            {/* Agencia - Auto-llenado */}
+            {/* Fecha de Notificación */}
             <div>
-              <label htmlFor="agencia" className="form-label">
-                Agencia *
+              <label htmlFor="fechaNotificacion" className="form-label">
+                Fecha de Notificación *
               </label>
               <input
-                id="agencia"
-                type="text"
-                value={agencia}
-                className="form-input bg-gray-100"
-                placeholder="Se llenará automáticamente"
+                id="fechaNotificacion"
+                type="date"
+                value={fechaNotificacion}
+                onChange={(e) => setFechaNotificacion(e.target.value)}
+                className="form-input"
                 required
-                readOnly
-                disabled
+                disabled={isLoading || !creditoValidado}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Se obtiene automáticamente de Oracle
-              </p>
             </div>
 
             {/* GPS */}
@@ -373,7 +424,7 @@ export default function FormPage() {
                   disabled={obteniendoGPS || isLoading || !creditoValidado}
                   className="px-4 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                 >
-                  {obteniendoGPS ? 'Obteniendo...' : '📍 Obtener Ubicación'}
+                  {obteniendoGPS ? 'Obteniendo...' : '📍 Obtener'}
                 </button>
               </div>
               <p className="text-xs text-gray-500 mt-1">
@@ -417,15 +468,40 @@ export default function FormPage() {
             {/* Imágenes */}
             <div>
               <label className="form-label">
-                Imágenes (máximo 5, hasta 5MB cada una)
+                Imágenes (máximo 5, hasta 10MB cada una)
               </label>
+              {comprimiendoImagenes && (
+                <div className="mt-2 mb-2 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-2 rounded-lg flex items-center">
+                  <svg
+                    className="animate-spin h-5 w-5 mr-2"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  <span className="text-sm">Comprimiendo imágenes para optimizar tamaño...</span>
+                </div>
+              )}
 
               {/* Input de archivos */}
               <div className="mt-2">
                 <label
                   htmlFor="imagenes"
                   className={`flex items-center justify-center w-full h-32 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-lg appearance-none ${
-                    creditoValidado && !isLoading
+                    creditoValidado && !isLoading && !comprimiendoImagenes
                       ? 'cursor-pointer hover:border-primary-400'
                       : 'cursor-not-allowed opacity-50'
                   } focus:outline-none`}
@@ -445,10 +521,13 @@ export default function FormPage() {
                       />
                     </svg>
                     <span className="text-sm text-gray-600">
-                      Click para seleccionar imágenes
+                      {comprimiendoImagenes ? 'Comprimiendo...' : 'Click para seleccionar imágenes'}
                     </span>
                     <span className="text-xs text-gray-500">
                       {imagenes.length}/5 imágenes seleccionadas
+                    </span>
+                    <span className="text-xs text-gray-400 italic">
+                      Las imágenes se comprimirán automáticamente
                     </span>
                   </div>
                 </label>
@@ -459,7 +538,7 @@ export default function FormPage() {
                   multiple
                   onChange={handleFileChange}
                   className="hidden"
-                  disabled={isLoading || imagenes.length >= 5 || !creditoValidado}
+                  disabled={isLoading || imagenes.length >= 5 || !creditoValidado || comprimiendoImagenes}
                 />
               </div>
 
@@ -526,40 +605,51 @@ export default function FormPage() {
               </div>
             )}
 
-            {/* Botón Submit */}
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={isLoading || !creditoValidado}
-            >
-              {isLoading ? (
-                <span className="flex items-center justify-center">
-                  <svg
-                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Enviando...
-                </span>
-              ) : (
-                'Enviar Registro'
+            {/* Botones */}
+            <div className="flex gap-4">
+              {registroGuardado && (
+                <button
+                  type="button"
+                  onClick={handleNuevoRegistro}
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Nuevo
+                </button>
               )}
-            </button>
+              <button
+                type="submit"
+                className={`${registroGuardado ? 'flex-1' : 'w-full'} px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                disabled={isLoading || !creditoValidado || registroGuardado}
+              >
+                {isLoading ? (
+                  <span className="flex items-center justify-center">
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Guardando...
+                  </span>
+                ) : (
+                  'Guardar'
+                )}
+              </button>
+            </div>
           </form>
         </div>
       </div>

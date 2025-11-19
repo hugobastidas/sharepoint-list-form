@@ -68,15 +68,16 @@ export async function POST(request: NextRequest) {
     const files: Array<{ name: string; buffer: Buffer }> = [];
     const imageKeys = Array.from(formData.keys()).filter((key) => key.startsWith('imagen_'));
 
+    let fileIndex = 0;
     for (const key of imageKeys) {
       const file = formData.get(key) as File;
       if (file && file.size > 0) {
-        // Validar tamaño del archivo (máximo 5MB)
-        if (file.size > 5 * 1024 * 1024) {
+        // Validar tamaño del archivo (máximo 10MB)
+        if (file.size > 10 * 1024 * 1024) {
           return NextResponse.json(
             {
               success: false,
-              error: `El archivo ${file.name} excede el tamaño máximo de 5MB`,
+              error: `El archivo ${file.name} excede el tamaño máximo de 10MB`,
             },
             { status: 400 }
           );
@@ -97,10 +98,17 @@ export async function POST(request: NextRequest) {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
+        // Generar nombre único para evitar conflictos
+        // Formato: timestamp_index_nombreoriginal
+        const timestamp = Date.now();
+        const uniqueName = `${timestamp}_${fileIndex}_${file.name}`;
+
         files.push({
-          name: file.name,
+          name: uniqueName,
           buffer,
         });
+
+        fileIndex++;
       }
     }
 

@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Configuración para Docker (standalone output)
+  output: 'standalone',
   experimental: {
     serverActions: true,
   },

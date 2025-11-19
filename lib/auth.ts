@@ -12,10 +12,16 @@ const TOKEN_MAX_AGE = 60 * 60 * 24; // 24 horas
 /**
  * Crea un JWT token con la información del usuario
  */
-export async function createToken(username: string, displayName?: string, email?: string): Promise<string> {
+export async function createToken(
+  username: string,
+  displayName?: string,
+  email?: string,
+  groups?: string[]
+): Promise<string> {
   const payload: any = { username };
   if (displayName) payload.displayName = displayName;
   if (email) payload.email = email;
+  if (groups) payload.groups = groups;
 
   const token = await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })

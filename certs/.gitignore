@@ -1,0 +1,8 @@
+# Ignorar todos los certificados
+*.pem
+*.key
+*.crt
+*.cert
+
+# Permitir el README
+!README.md

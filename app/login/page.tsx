@@ -33,8 +33,8 @@ export default function LoginPage() {
         return;
       }
 
-      // Redirigir al formulario
-      router.push('/form');
+      // Redirigir al dashboard
+      router.push('/dashboard');
     } catch (err: any) {
       console.error('Error en login:', err);
       setError('Error de conexión. Intente nuevamente.');
