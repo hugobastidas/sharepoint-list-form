@@ -28,14 +28,25 @@ export async function POST(request: NextRequest) {
     const diasMora = formData.get('diasMora') as string;
     const fechaCompromiso = formData.get('fechaCompromiso') as string;
     const observaciones = formData.get('observaciones') as string;
-    const usuario = formData.get('usuario') as string;
 
     // Validar campos requeridos
-    if (!numeroCredito || !fechaNotificacion || !diasMora || !usuario) {
+    if (!numeroCredito || !fechaNotificacion || !diasMora) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Faltan campos requeridos: numeroCredito, fechaNotificacion, diasMora, usuario',
+          error: 'Faltan campos requeridos: numeroCredito, fechaNotificacion, diasMora',
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validar que diasMora sea mayor a 0
+    const diasMoraNum = parseInt(diasMora, 10);
+    if (isNaN(diasMoraNum) || diasMoraNum < 1) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Días de mora debe ser un número mayor o igual a 1',
         },
         { status: 400 }
       );
@@ -46,10 +57,9 @@ export async function POST(request: NextRequest) {
       numeroCredito,
       fechaNotificacion,
       gps: gps || '',
-      diasMora: parseInt(diasMora, 10),
+      diasMora: diasMoraNum,
       fechaCompromiso: fechaCompromiso || '',
       observaciones: observaciones || '',
-      usuario,
     };
 
     // Procesar archivos adjuntos

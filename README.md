@@ -74,9 +74,14 @@ cp .env.example .env
 Editar `.env` con tus valores:
 
 ```env
-# LDAP Configuration
-LDAP_URL=ldap://localhost:389
-LDAP_BASE_DN=OU=Users,DC=empresa,DC=local
+# LDAP Configuration (Active Directory)
+LDAP_SERVER=servidor-ad.empresa.local
+LDAP_PORT=389
+LDAP_DOMAIN=empresa.local
+LDAP_USE_SSL=False
+LDAP_BASE_DN=DC=empresa,DC=local
+LDAP_USER_SEARCH_BASE=DC=empresa,DC=local
+LDAP_USER_SEARCH_FILTER=(&(&(objectClass=user)(objectCategory=person))(!(userAccountControl:1.2.840.113556.1.4.803:=2))(sAMAccountName={username}))
 
 # Microsoft Graph Configuration
 GRAPH_TENANT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
@@ -87,7 +92,7 @@ GRAPH_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 SP_SITE_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 SP_LIST_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 
-# Next Auth Secret
+# Next Auth Secret (genera uno con: openssl rand -base64 32)
 NEXTAUTH_SECRET=una_clave_segura_generada_aleatoriamente
 
 # App URL
@@ -867,44 +872,59 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 ---
 
-## Configuración de LDAP
+## Configuración de LDAP (Active Directory)
 
-### Configurar servidor LDAP
+### Configurar servidor LDAP/AD
 
-Las variables de entorno LDAP:
-
-```env
-LDAP_URL=ldap://servidor-ldap:389
-LDAP_BASE_DN=OU=Users,DC=empresa,DC=local
-```
-
-#### Ejemplo para Active Directory:
+El sistema ahora utiliza autenticación directa con Active Directory usando el formato `username@domain`. Las variables de entorno LDAP son:
 
 ```env
-LDAP_URL=ldap://ad.empresa.local:389
-LDAP_BASE_DN=OU=Usuarios,DC=empresa,DC=local
+# Servidor LDAP (IP o hostname del servidor AD)
+LDAP_SERVER=servidor-ad.empresa.local
+
+# Puerto LDAP (389 para LDAP sin cifrar, 636 para LDAPS con SSL)
+LDAP_PORT=389
+
+# Dominio para autenticación directa (username@domain)
+LDAP_DOMAIN=empresa.local
+
+# Usar SSL/TLS (True para LDAPS puerto 636, False para LDAP puerto 389)
+LDAP_USE_SSL=False
+
+# Base DN del directorio LDAP
+LDAP_BASE_DN=DC=empresa,DC=local
+
+# Base DN donde buscar usuarios
+LDAP_USER_SEARCH_BASE=DC=empresa,DC=local
+
+# Filtro LDAP para búsqueda de usuarios activos (no deshabilitados)
+# {username} será reemplazado por el username ingresado en el login
+# Este filtro excluye cuentas deshabilitadas usando userAccountControl:1.2.840.113556.1.4.803:=2
+LDAP_USER_SEARCH_FILTER=(&(&(objectClass=user)(objectCategory=person))(!(userAccountControl:1.2.840.113556.1.4.803:=2))(sAMAccountName={username}))
 ```
 
-#### Ejemplo para OpenLDAP:
+### Características de autenticación LDAP
+
+1. **Autenticación directa**: Usa `username@domain` para autenticar (ej: `jdoe@empresa.local`)
+2. **Verificación de cuenta activa**: El filtro LDAP excluye automáticamente cuentas deshabilitadas
+3. **Búsqueda flexible**: Puedes configurar el `USER_SEARCH_BASE` para buscar solo en OUs específicas
+4. **Soporte SSL/TLS**: Configurable mediante `LDAP_USE_SSL`
+
+### Personalizar filtro LDAP
+
+El filtro predeterminado busca:
+- Objetos de tipo `user` y categoría `person`
+- Cuentas que NO estén deshabilitadas (userAccountControl bit 2 no activado)
+- Que coincidan con el `sAMAccountName`
+
+Puedes modificar el filtro en `.env` para ajustarlo a tus necesidades:
 
 ```env
-LDAP_URL=ldap://ldap.empresa.local:389
-LDAP_BASE_DN=ou=people,dc=empresa,dc=local
-```
+# Ejemplo: buscar solo en una OU específica y usuarios activos
+LDAP_USER_SEARCH_BASE=OU=Usuarios,OU=Departamento,DC=empresa,DC=local
 
-### Probar conexión LDAP
-
-El sistema construye el DN del usuario como:
-
-```
-CN={username},{LDAP_BASE_DN}
-```
-
-Si tu estructura es diferente, modifica `lib/ldapClient.ts` línea 21:
-
-```typescript
-// Ejemplo: si usas uid en lugar de CN
-const userDN = `uid=${username},${this.baseDN}`;
+# Ejemplo: filtro adicional para grupos específicos
+LDAP_USER_SEARCH_FILTER=(&(&(objectClass=user)(objectCategory=person))(!(userAccountControl:1.2.840.113556.1.4.803:=2))(sAMAccountName={username})(memberOf=CN=GrupoAcceso,OU=Grupos,DC=empresa,DC=local))
 ```
 
 ## Ejecución
@@ -936,13 +956,12 @@ npm start
 ### 2. Crear registro
 
 1. Completar los campos del formulario:
-   - **Número de Crédito** (requerido)
-   - **Fecha de Notificación** (requerido)
-   - **GPS** (opcional)
-   - **Días de Mora** (requerido)
-   - **Fecha de Compromiso** (opcional)
-   - **Observaciones** (opcional)
-   - **Usuario** (requerido)
+   - **Número de Crédito** (requerido) - Se usará como ID del registro en SharePoint
+   - **Fecha de Notificación** (requerido) - Fecha en que se notifica al socio
+   - **Días de Mora** (requerido) - Debe ser un número mayor o igual a 1
+   - **GPS** (opcional) - Coordenadas GPS o descripción de ubicación
+   - **Fecha de Compromiso de Pago** (opcional) - Fecha acordada para el pago
+   - **Observaciones** (opcional) - Comentarios adicionales
 
 2. Adjuntar imágenes (opcional):
    - Click en el área de adjuntos
